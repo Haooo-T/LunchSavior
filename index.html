@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>午餐救星 · 附近餐廳搜尋</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page-bg: #F2F3F5;
+    --card-bg: #FFFFFF;
+    --surface-muted: #F3F4F6;
+    --line: #E4E6EA;
+    --ink: #1C2027;
+    --ink-dim: #767C87;
+    --accent: #12796B;
+    --accent-dark: #0D5C51;
+    --accent-soft: #E3F3EF;
+    --lucky-start: #FF9A3D;
+    --lucky-end: #FF6656;
+    --chili: #D6483A;
+    --good: #2E9152;
+    --shadow: 0 1px 2px rgba(20,24,32,0.05), 0 10px 28px rgba(20,24,32,0.07);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans TC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body { min-height: 100vh; }
+
+  .top {
+    background: var(--card-bg);
+    padding: 2.25rem clamp(1.25rem, 4vw, 3rem) 1.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .top h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    margin: 0 0 0.35rem;
+    letter-spacing: -0.01em;
+  }
+
+  .top p {
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 0.95rem;
+    max-width: 46ch;
+    line-height: 1.6;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1.5rem;
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 1.75rem clamp(1rem, 4vw, 2rem) 3.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 1.75rem clamp(1.25rem, 4vw, 2rem);
+    align-self: start;
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  @media (max-width: 860px) {
+    .panel { position: static; }
+  }
+
+  .field { margin-bottom: 1.35rem; }
+
+  .field.disabled { opacity: 0.35; pointer-events: none; }
+
+  .field label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+    margin-bottom: 0.45rem;
+  }
+
+  .field input[type="text"] {
+    width: 100%;
+    background: var(--surface-muted);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.65rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .custom-type-input { margin-top: 0.6rem; }
+
+  .row-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .field .hint {
+    font-size: 0.78rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
+  .chip-group {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--surface-muted);
+    color: var(--ink-dim);
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+  }
+
+  .chip.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+  }
+
+  .toggle {
+    width: 38px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    border: 1px solid var(--line);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--ink-dim);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  .toggle.on { background: var(--accent-soft); border-color: var(--accent); }
+  .toggle.on::after { transform: translateX(16px); background: var(--accent); }
+
+  .toggle-row span { font-size: 0.9rem; }
+
+  button.search-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    border: none;
+    padding: 0.85rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    box-shadow: 0 8px 18px rgba(18,121,107,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  button.search-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(18,121,107,0.32); }
+  button.search-btn:disabled { background: var(--line); color: var(--ink-dim); cursor: default; box-shadow: none; transform: none; }
+
+  .advanced-toggle {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-bottom: 1rem;
+    font-family: inherit;
+  }
+
+  .advanced { display: none; }
+  .advanced.open { display: block; }
+
+  .results {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 1.75rem clamp(1.25rem, 4vw, 2.5rem) 2.5rem;
+    min-height: 480px;
+  }
+
+  .results-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+
+  .results-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  .results-head .count {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+  }
+
+  /* 「懶得想」放在走路時間／搜尋半徑欄位下方，盡量撐滿側邊欄寬度 */
+  .random-inline {
+    margin: 0.15rem 0 1.6rem;
+  }
+
+  button.random-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    background: linear-gradient(135deg, var(--lucky-start), var(--lucky-end));
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    padding: 1.05rem 1.2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(255,102,86,0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  button.random-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(255,102,86,0.38); }
+  button.random-btn:disabled { opacity: 0.65; cursor: default; transform: none; }
+
+  .pick-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: start;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .pick-card .tag {
+    font-size: 0.72rem;
+    color: var(--accent-dark);
+    letter-spacing: 0.06em;
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+  }
+
+  .pick-card .name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.35rem;
+  }
+
+  .pick-card .addr {
+    color: var(--ink-dim);
+    font-size: 0.88rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .pick-card .meta {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+  }
+
+  .pick-card .meta .rating { color: var(--accent-dark); font-weight: 600; }
+  .pick-card .meta .open { color: var(--good); }
+  .pick-card .meta .closed { color: var(--chili); }
+
+  .pick-card .emoji {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .state-msg {
+    color: var(--ink-dim);
+    font-size: 0.95rem;
+    padding: 1.5rem 0;
+    line-height: 1.7;
+  }
+
+  .state-msg.error { color: var(--chili); }
+
+  .list { list-style: none; margin: 0; padding: 0; }
+
+  .card {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr auto;
+    gap: 1rem;
+    align-items: start;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .card .num {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    color: var(--accent);
+    padding-top: 0.1rem;
+  }
+
+  .card .name {
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin: 0 0 0.3rem;
+  }
+
+  .card .addr {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    margin: 0 0 0.4rem;
+  }
+
+  .card .meta {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+  }
+
+  .card .meta .rating { color: var(--accent-dark); font-weight: 600; }
+  .card .meta .open { color: var(--good); }
+  .card .meta .closed { color: var(--chili); }
+
+  .card .price {
+    font-size: 0.9rem;
+    color: var(--ink-dim);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  ::placeholder { color: var(--ink-dim); opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>午餐救星</h1>
+  <p>如果不知道就給地址或地點後按懶得想</p>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <div class="field">
+      <label for="address">地址/地點</label>
+      <input type="text" id="address" placeholder="例如：台北市信義區信義路五段7號，或直接輸入「台北101」">
+    </div>
+
+    <div class="field">
+      <label>距離篩選方式</label>
+      <div class="chip-group" id="distanceModeChips">
+        <div class="chip active" data-value="walk">走路時間</div>
+        <div class="chip" data-value="radius">搜尋半徑（公尺）</div>
+      </div>
+    </div>
+
+    <div class="field" id="walkTimeField">
+      <div class="row-inline">
+        <label for="walkTime" style="margin-bottom:0">走路時間</label>
+        <span class="hint" id="walkTimeVal">19 分鐘（約 1500 公尺）</span>
+      </div>
+      <input type="range" id="walkTime" min="1" max="60" step="1" value="19">
+    </div>
+
+    <div class="field" id="radiusField" style="display:none">
+      <div class="row-inline">
+        <label for="radius" style="margin-bottom:0">搜尋半徑</label>
+        <span class="hint" id="radiusVal">1500 公尺</span>
+      </div>
+      <input type="range" id="radius" min="200" max="5000" step="100" value="1500" disabled>
+    </div>
+
+    <div class="random-inline">
+      <button class="random-btn" id="randomBtn">🎲 懶得想</button>
+    </div>
+
+    <div class="field">
+      <label>最低評分</label>
+      <div class="chip-group" id="ratingChips">
+        <div class="chip" data-value="">不限</div>
+        <div class="chip" data-value="3">3★+</div>
+        <div class="chip active" data-value="4">4★+</div>
+        <div class="chip" data-value="4.5">4.5★+</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>價位</label>
+      <div class="chip-group" id="priceChips">
+        <div class="chip active" data-value="">不限</div>
+        <div class="chip" data-value="0">$</div>
+        <div class="chip" data-value="1">$$</div>
+        <div class="chip" data-value="2">$$$</div>
+        <div class="chip" data-value="3">$$$$</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>類型</label>
+      <div class="chip-group" id="typeChips">
+        <div class="chip active" data-value="">不限</div>
+        <div class="chip" data-value="乾麵">乾麵</div>
+        <div class="chip" data-value="炒飯">炒飯</div>
+        <div class="chip" data-value="烏龍麵">烏龍麵</div>
+        <div class="chip" data-value="牛排">牛排</div>
+        <div class="chip" data-value="豬排">豬排</div>
+        <div class="chip" data-value="火鍋">火鍋</div>
+        <div class="chip" data-value="壽司">壽司</div>
+        <div class="chip" data-value="拉麵">拉麵</div>
+        <div class="chip" data-value="燒烤">燒烤</div>
+        <div class="chip" data-value="便當">便當</div>
+        <div class="chip" data-value="咖啡">咖啡</div>
+        <div class="chip" data-value="早午餐">早午餐</div>
+        <div class="chip" data-value="custom">自訂</div>
+      </div>
+      <input type="text" id="customType" class="custom-type-input" placeholder="輸入想吃的類型，例如：韓式炸雞" style="display:none">
+    </div>
+
+    <div class="field">
+      <div class="toggle-row" id="openNowRow">
+        <div class="toggle" id="openNowToggle"></div>
+        <span>只顯示營業中</span>
+      </div>
+    </div>
+
+    <button class="advanced-toggle" id="advancedToggle">更多篩選 ▾</button>
+
+    <div class="advanced" id="advanced">
+      <div class="field">
+        <label for="keyword">關鍵字（料理類型等）</label>
+        <input type="text" id="keyword" placeholder="例如：火鍋、素食、拉麵">
+      </div>
+      <div class="field">
+        <label for="limit">最多顯示筆數</label>
+        <input type="text" id="limit" value="20">
+      </div>
+    </div>
+
+    <button class="search-btn" id="searchBtn">搜尋附近餐廳</button>
+  </div>
+
+  <div class="results">
+    <div class="results-head">
+      <h2>搜尋結果</h2>
+      <span class="count" id="resultCount"></span>
+    </div>
+
+    <div id="randomPick"></div>
+    <div id="resultsBody">
+      <p class="state-msg">輸入地址或地點後按「搜尋附近餐廳」開始，或直接按「懶得想」。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const radiusInput = document.getElementById('radius');
+  const radiusVal = document.getElementById('radiusVal');
+  const walkTimeInput = document.getElementById('walkTime');
+  const walkTimeVal = document.getElementById('walkTimeVal');
+
+  // 走路速度估算：平均約 4.8 km/h（80 公尺/分鐘），僅用來把「走路時間」換算成搜尋半徑
+  const WALK_METERS_PER_MIN = 80;
+
+  function updateRadiusLabel() {
+    radiusVal.textContent = `${radiusInput.value} 公尺`;
+  }
+  function updateWalkLabel() {
+    const meters = Math.round(walkTimeInput.value * WALK_METERS_PER_MIN);
+    walkTimeVal.textContent = `${walkTimeInput.value} 分鐘（約 ${meters} 公尺）`;
+  }
+
+  walkTimeInput.addEventListener('input', updateWalkLabel);
+  radiusInput.addEventListener('input', updateRadiusLabel);
+
+  updateRadiusLabel();
+  updateWalkLabel();
+
+  // 「走路時間」和「搜尋半徑」互斥：只有被選中的那個會啟用並顯示，也只有它的值會用於搜尋
+  const walkTimeField = document.getElementById('walkTimeField');
+  const radiusField = document.getElementById('radiusField');
+
+  function setDistanceMode(mode) {
+    const isWalk = mode === 'walk';
+    walkTimeField.style.display = isWalk ? '' : 'none';
+    radiusField.style.display = isWalk ? 'none' : '';
+    walkTimeInput.disabled = !isWalk;
+    radiusInput.disabled = isWalk;
+  }
+
+  function setupChips(groupId, onSelect) {
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        if (onSelect) onSelect(chip.dataset.value);
+      });
+    });
+  }
+
+  setupChips('distanceModeChips', setDistanceMode);
+  setupChips('ratingChips');
+  setupChips('priceChips');
+  const customTypeInput = document.getElementById('customType');
+  setupChips('typeChips', (value) => {
+    customTypeInput.style.display = value === 'custom' ? '' : 'none';
+    if (value === 'custom') customTypeInput.focus();
+  });
+
+  const openNowToggle = document.getElementById('openNowToggle');
+  let openNowOn = false;
+  document.getElementById('openNowRow').addEventListener('click', () => {
+    openNowOn = !openNowOn;
+    openNowToggle.classList.toggle('on', openNowOn);
+  });
+
+  const advancedToggle = document.getElementById('advancedToggle');
+  const advanced = document.getElementById('advanced');
+  advancedToggle.addEventListener('click', () => {
+    advanced.classList.toggle('open');
+    advancedToggle.textContent = advanced.classList.contains('open') ? '更多篩選 ▴' : '更多篩選 ▾';
+  });
+
+  function activeChipValue(groupId) {
+    const group = document.getElementById(groupId);
+    return group.querySelector('.chip.active').dataset.value;
+  }
+
+  function priceLabel(level) {
+    if (level === null || level === undefined) return null;
+    return '$'.repeat(level + 1);
+  }
+
+  function renderResults(data) {
+    const body = document.getElementById('resultsBody');
+    const count = document.getElementById('resultCount');
+    count.textContent = `${data.count} 間`;
+
+    if (!data.results.length) {
+      body.innerHTML = '<p class="state-msg">這個範圍內沒有符合條件的餐廳，試著放寬篩選條件。</p>';
+      return;
+    }
+
+    const items = data.results.map((r, i) => {
+      const num = String(i + 1).padStart(2, '0');
+      const rating = r.rating ? `<span class="rating">★ ${r.rating}</span>` : '';
+      const openTag = r.open_now === true ? '<span class="open">營業中</span>'
+                    : r.open_now === false ? '<span class="closed">已打烊</span>' : '';
+      const price = priceLabel(r.price_level) || '';
+      return `
+        <li class="card">
+          <span class="num">${num}</span>
+          <div>
+            <p class="name">${r.name}</p>
+            <p class="addr">${r.address || ''}</p>
+            <div class="meta">${rating}${openTag}</div>
+          </div>
+          <span class="price">${price}</span>
+        </li>`;
+    }).join('');
+
+    body.innerHTML = `<ul class="list">${items}</ul>`;
+  }
+
+  function buildParams(address) {
+    const params = new URLSearchParams();
+    params.set('address', address);
+
+    const distanceMode = activeChipValue('distanceModeChips');
+    const radiusMeters = distanceMode === 'walk'
+      ? Math.round(walkTimeInput.value * WALK_METERS_PER_MIN)
+      : Number(radiusInput.value);
+    params.set('radius', radiusMeters);
+
+    const minRating = activeChipValue('ratingChips');
+    if (minRating) params.set('min_rating', minRating);
+
+    const priceLevel = activeChipValue('priceChips');
+    if (priceLevel !== '') params.set('price_level', priceLevel);
+
+    if (openNowOn) params.set('open_now', 'true');
+
+    // 「類型」chip 與自由輸入的關鍵字都會傳給 Google Places 的 keyword 參數，兩者可並用
+    let typeValue = activeChipValue('typeChips');
+    if (typeValue === 'custom') {
+      typeValue = document.getElementById('customType').value.trim();
+    }
+    const freeKeyword = document.getElementById('keyword').value.trim();
+    const keywordParts = [typeValue, freeKeyword].filter(Boolean);
+    if (keywordParts.length) params.set('keyword', keywordParts.join(' '));
+
+    const limit = document.getElementById('limit').value.trim();
+    if (limit) params.set('limit', limit);
+
+    return params;
+  }
+
+  async function fetchRestaurants(address) {
+    const params = buildParams(address);
+    let resp;
+    try {
+      resp = await fetch(`/api/restaurants?${params.toString()}`);
+    } catch (networkErr) {
+      throw new Error('連不到後端伺服器，請確認是用瀏覽器打開 http://localhost:5000（而不是直接開啟 index.html 檔案），且 Flask 伺服器有在執行中。');
+    }
+
+    const rawText = await resp.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      // 收到的不是 JSON，通常代表拿到了 HTML 錯誤頁——多半是用 file:// 直接開啟網頁、
+      // 或後端沒有正常啟動。這裡給出好懂的訊息，而不是丟出原始的瀏覽器錯誤。
+      throw new Error('伺服器回應的格式不正確，請確認是用瀏覽器打開 http://localhost:5000，且後端伺服器正常執行中。');
+    }
+
+    if (!resp.ok) {
+      throw new Error(data.error || '搜尋失敗，請確認 API 是否正常運作。');
+    }
+    return data;
+  }
+
+  function getAddressOrWarn(targetEl) {
+    const address = document.getElementById('address').value.trim();
+    if (!address) {
+      targetEl.innerHTML = '<p class="state-msg error">請先輸入地址或地點。</p>';
+      return null;
+    }
+    return address;
+  }
+
+  async function doSearch() {
+    const body = document.getElementById('resultsBody');
+    const count = document.getElementById('resultCount');
+    const btn = document.getElementById('searchBtn');
+
+    const address = getAddressOrWarn(body);
+    if (!address) return;
+
+    btn.disabled = true;
+    btn.textContent = '搜尋中…';
+    count.textContent = '';
+    body.innerHTML = '<p class="state-msg">搜尋中，請稍候…</p>';
+    document.getElementById('randomPick').innerHTML = '';
+
+    try {
+      const data = await fetchRestaurants(address);
+      renderResults(data);
+    } catch (err) {
+      body.innerHTML = `<p class="state-msg error">${err.message}</p>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '搜尋附近餐廳';
+    }
+  }
+
+  function renderPickCard(r) {
+    const pickBody = document.getElementById('randomPick');
+    const rating = r.rating ? `<span class="rating">★ ${r.rating}</span>` : '';
+    const openTag = r.open_now === true ? '<span class="open">營業中</span>'
+                  : r.open_now === false ? '<span class="closed">已打烊</span>' : '';
+    const price = priceLabel(r.price_level) || '';
+    pickBody.innerHTML = `
+      <div class="pick-card">
+        <span class="emoji">🎯</span>
+        <div>
+          <span class="tag">今天就吃這家</span>
+          <p class="name">${r.name}</p>
+          <p class="addr">${r.address || ''}</p>
+          <div class="meta">${rating}${openTag}${price ? `<span>${price}</span>` : ''}</div>
+        </div>
+      </div>`;
+  }
+
+  async function doRandomPick() {
+    const randomBtn = document.getElementById('randomBtn');
+    const pickBody = document.getElementById('randomPick');
+
+    const address = getAddressOrWarn(pickBody);
+    if (!address) return;
+
+    randomBtn.disabled = true;
+    randomBtn.textContent = '挑選中…';
+    pickBody.innerHTML = '';
+
+    try {
+      // 每次都用目前勾選的條件重新查詢，確保挑到的是符合當下篩選的餐廳
+      const data = await fetchRestaurants(address);
+
+      if (!data.results.length) {
+        pickBody.innerHTML = '<p class="state-msg">目前條件下沒有符合的餐廳，放寬一點篩選再試試。</p>';
+        document.getElementById('resultsBody').innerHTML = '';
+        document.getElementById('resultCount').textContent = '';
+        return;
+      }
+
+      const picked = data.results[Math.floor(Math.random() * data.results.length)];
+      renderPickCard(picked);
+      renderResults(data);
+    } catch (err) {
+      pickBody.innerHTML = `<p class="state-msg error">${err.message}</p>`;
+    } finally {
+      randomBtn.disabled = false;
+      randomBtn.textContent = '🎲 懶得想';
+    }
+  }
+
+  document.getElementById('searchBtn').addEventListener('click', doSearch);
+  document.getElementById('randomBtn').addEventListener('click', doRandomPick);
+  document.getElementById('address').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+</script>
+
+</body>
+</html>

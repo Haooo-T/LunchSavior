@@ -14,13 +14,13 @@
     --line: #E4E6EA;
     --ink: #1C2027;
     --ink-dim: #767C87;
-    --accent: #12796B;
-    --accent-dark: #0D5C51;
-    --accent-soft: #E3F3EF;
+    --accent: #1D68B0;
+    --accent-dark: #12456F;
+    --accent-soft: #DCEAF8;
     --lucky-start: #FF9A3D;
     --lucky-end: #FF6656;
     --chili: #D6483A;
-    --good: #2E9152;
+    --good: #2E86C1;
     --shadow: 0 1px 2px rgba(20,24,32,0.05), 0 10px 28px rgba(20,24,32,0.07);
   }
 
@@ -208,11 +208,11 @@
     font-family: inherit;
     cursor: pointer;
     margin-top: 0.5rem;
-    box-shadow: 0 8px 18px rgba(18,121,107,0.25);
+    box-shadow: 0 8px 18px rgba(29,104,176,0.28);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
-  button.search-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(18,121,107,0.32); }
+  button.search-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(29,104,176,0.36); }
   button.search-btn:disabled { background: var(--line); color: var(--ink-dim); cursor: default; box-shadow: none; transform: none; }
 
   .advanced-toggle {
@@ -748,6 +748,8 @@
     randomBtn.disabled = true;
     randomBtn.textContent = '挑選中…';
     pickBody.innerHTML = '';
+    document.getElementById('resultsBody').innerHTML = '';
+    document.getElementById('resultCount').textContent = '';
 
     try {
       // 每次都用目前勾選的條件重新查詢，確保挑到的是符合當下篩選的餐廳
@@ -755,14 +757,11 @@
 
       if (!data.results.length) {
         pickBody.innerHTML = '<p class="state-msg">目前條件下沒有符合的餐廳，放寬一點篩選再試試。</p>';
-        document.getElementById('resultsBody').innerHTML = '';
-        document.getElementById('resultCount').textContent = '';
         return;
       }
 
       const picked = data.results[Math.floor(Math.random() * data.results.length)];
       renderPickCard(picked);
-      renderResults(data);
     } catch (err) {
       pickBody.innerHTML = `<p class="state-msg error">${err.message}</p>`;
     } finally {

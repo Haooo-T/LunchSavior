@@ -11,7 +11,8 @@
 """
 
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from urllib.parse import quote
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import requests
@@ -31,6 +32,7 @@ GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 FIND_PLACE_URL = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
 NEARBY_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+PLACE_PHOTO_URL = "https://maps.googleapis.com/maps/api/place/photo"
 
 
 @app.route("/")
@@ -153,9 +155,17 @@ def format_restaurant(place: dict) -> dict:
     if place.get("photos"):
         photo_ref = place["photos"][0].get("photo_reference")
 
+    place_id = place.get("place_id", "")
+    name = place.get("name", "")
+    # Google 官方文件建議的深連結格式，不需要額外的 API 呼叫或金鑰
+    map_url = (
+        f"https://www.google.com/maps/search/?api=1"
+        f"&query={quote(name)}&query_place_id={place_id}"
+    )
+
     return {
-        "place_id": place.get("place_id"),
-        "name": place.get("name"),
+        "place_id": place_id,
+        "name": name,
         "address": place.get("vicinity"),
         "rating": place.get("rating"),
         "user_ratings_total": place.get("user_ratings_total"),
@@ -163,6 +173,7 @@ def format_restaurant(place: dict) -> dict:
         "open_now": place.get("opening_hours", {}).get("open_now"),
         "location": location,
         "photo_reference": photo_ref,
+        "map_url": map_url,
     }
 
 
@@ -216,6 +227,30 @@ def get_restaurants():
         "count": len(restaurants),
         "results": restaurants,
     })
+
+
+@app.route("/api/photo", methods=["GET"])
+def get_photo():
+    """
+    代理 Google Place Photo，前端只要帶 photo_reference 過來，
+    金鑰留在後端，不會外洩到瀏覽器裡。
+    """
+    if not GOOGLE_API_KEY:
+        return jsonify({"error": "尚未設定 GOOGLE_API_KEY 環境變數"}), 500
+
+    photo_ref = request.args.get("ref")
+    if not photo_ref:
+        return jsonify({"error": "缺少 ref 參數"}), 400
+
+    maxwidth = request.args.get("maxwidth", default=600, type=int)
+    params = {"photoreference": photo_ref, "maxwidth": maxwidth, "key": GOOGLE_API_KEY}
+
+    upstream = requests.get(PLACE_PHOTO_URL, params=params, timeout=10)
+    if upstream.status_code != 200:
+        return jsonify({"error": "圖片讀取失敗"}), 502
+
+    content_type = upstream.headers.get("Content-Type", "image/jpeg")
+    return Response(upstream.content, content_type=content_type)
 
 
 @app.route("/health", methods=["GET"])

@@ -287,23 +287,38 @@
   button.random-btn:disabled { opacity: 0.65; cursor: default; transform: none; }
 
   .pick-card {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 1rem;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
     background: var(--accent-soft);
     border: 1px solid var(--accent);
-    border-radius: 12px;
-    padding: 1.1rem 1.3rem;
+    border-radius: 14px;
+    overflow: hidden;
     margin-bottom: 1.4rem;
+  }
+
+  .pick-photo {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+    background: var(--surface-muted);
+  }
+
+  .pick-card-body {
+    padding: 1.1rem 1.3rem;
+  }
+
+  .pick-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
   }
 
   .pick-card .tag {
     font-size: 0.72rem;
     color: var(--accent-dark);
     letter-spacing: 0.06em;
-    display: block;
-    margin-bottom: 0.3rem;
     font-weight: 600;
   }
 
@@ -332,8 +347,19 @@
   .pick-card .meta .open { color: var(--good); }
   .pick-card .meta .closed { color: var(--chili); }
 
+  .pick-card .map-link {
+    display: inline-block;
+    margin-top: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+    text-decoration: none;
+  }
+
+  .pick-card .map-link:hover { text-decoration: underline; }
+
   .pick-card .emoji {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     line-height: 1;
   }
 
@@ -726,14 +752,24 @@
     const openTag = r.open_now === true ? '<span class="open">營業中</span>'
                   : r.open_now === false ? '<span class="closed">已打烊</span>' : '';
     const price = priceLabel(r.price_level) || '';
+    const photo = r.photo_reference
+      ? `<img class="pick-photo" src="/api/photo?ref=${encodeURIComponent(r.photo_reference)}&maxwidth=700" alt="${r.name}">`
+      : '';
+    const mapLink = r.map_url
+      ? `<a class="map-link" href="${r.map_url}" target="_blank" rel="noopener noreferrer">在 Google 地圖上查看 →</a>`
+      : '';
     pickBody.innerHTML = `
       <div class="pick-card">
-        <span class="emoji">🎯</span>
-        <div>
-          <span class="tag">今天就吃這家</span>
+        ${photo}
+        <div class="pick-card-body">
+          <div class="pick-card-head">
+            <span class="emoji">🎯</span>
+            <span class="tag">今天就吃這家</span>
+          </div>
           <p class="name">${r.name}</p>
           <p class="addr">${r.address || ''}</p>
           <div class="meta">${rating}${openTag}${price ? `<span>${price}</span>` : ''}</div>
+          ${mapLink}
         </div>
       </div>`;
   }
